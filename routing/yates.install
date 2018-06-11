@@ -1,0 +1,7 @@
+lib: [
+  "_build/install/default/lib/yates/META" {"META"}
+  "_build/install/default/lib/yates/opam" {"opam"}
+]
+bin: [
+  "_build/install/default/bin/yates" {"yates"}
+]
