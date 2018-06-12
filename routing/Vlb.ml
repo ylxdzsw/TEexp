@@ -2,7 +2,7 @@ open Core
 
 open Apsp
 open Util
-open Types
+open Yates_Types
 
 let () = Random.self_init ~allow_in_tests:true ()
 
@@ -65,8 +65,4 @@ let solve (topo:topology) (d:demands) budget : scheme =
   prev_scheme := new_scheme;
   new_scheme
 
-let initialize (s:scheme) : unit =
-  prev_scheme := s;
-  ()
-
-let local_recovery = normalization_recovery
+let name = "Vlb"

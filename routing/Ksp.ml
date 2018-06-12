@@ -1,7 +1,7 @@
 open Core
 
 open Apsp
-open Types
+open Yates_Types
 
 (***************)
 (* local state *)
@@ -13,11 +13,7 @@ let prev_scheme = ref SrcDstMap.empty
 (* algorithm interface *)
 (***********************)
 
-(* Initialization not needed *)
-let initialize _ : unit = ()
-
-(* Recovery: normalization recovery *)
-let local_recovery = Util.normalization_recovery
+let name = "Ksp"
 
 (* Solve: Uniform distributoin over k-shortest paths *)
 let solve (topo:topology) (_:demands) budget: scheme =

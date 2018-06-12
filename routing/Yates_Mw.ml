@@ -1,4 +1,4 @@
-open Types
+open Yates_Types
 
 module type MW_INPUT = sig
 

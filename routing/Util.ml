@@ -1,6 +1,6 @@
 open Core
 
-open Types
+open Yates_Types
 
 let reverse_edge_exn topo e = match Topology.inverse_edge topo e with
           | Some x -> x

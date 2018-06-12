@@ -3,7 +3,7 @@ open Core
 open Apsp
 open LP_Lang
 open Util
-open Types
+open Yates_Types
 
 let prev_scheme = ref SrcDstMap.empty
 
@@ -272,8 +272,4 @@ let solve (topo:topology) (_:demands) budget: scheme =
   prev_scheme := new_scheme;
   new_scheme
 
-let initialize (s:scheme) : unit =
-  prev_scheme := s;
-  ()
-
-let local_recovery = normalization_recovery
+let name = "Edksp"

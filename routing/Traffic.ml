@@ -1,6 +1,6 @@
 open Core
 
-open Types
+open Yates_Types
 
 let open_demands (demand_file:string) (host_file:string) (topo:topology) : (index_map * In_channel.t) =
   let name_map =
@@ -57,14 +57,16 @@ let next_demand ?scale:(scale=1.0) (ic:In_channel.t) (host_map:index_map) : dema
   !demands
 
 let all_demands ?scale:(scale=1.0) (demand_file:string) (host_file:string) (topo:topology) : demands list =
+  let (hm, ic) = open_demands demand_file host_file topo in
+
   let parse_line line =
     let entries = Array.of_list (String.split line ~on:' ') in
     let size = Int.of_float (sqrt (Float.of_int (Array.length entries))) in
     let demands = ref SrcDstMap.empty in
       for i = 0 to (size-1) do
         for j = 0 to (size-1) do
-          let s = IntMap.find host_map i in
-          let d = IntMap.find host_map j in
+          let s = IntMap.find hm i in
+          let d = IntMap.find hm j in
           match (s,d) with
           | (Some s, Some d) ->
             let v = if i = j then 0.0 else (scale *. Float.of_string (entries.((i*size) + j))) in
@@ -76,10 +78,9 @@ let all_demands ?scale:(scale=1.0) (demand_file:string) (host_file:string) (topo
   let rec f acc = 
     let line = try Some (In_channel.input_line_exn ic) with e -> None in
     match line with
-    | Some line -> f (parse_demand_line line)::acc
+    | Some line -> f (parse_line line::acc)
     | None -> acc in
     
-  let (hm, ic) = open_demands demand_file host_file topo in
   let demands = f [] in
   close_demands ic;
   demands

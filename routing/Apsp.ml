@@ -1,7 +1,7 @@
 open Core
 
 open Util
-open Types
+open Yates_Types
 
 module PQueue = Core_kernel.Heap
 

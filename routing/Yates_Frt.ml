@@ -1,6 +1,6 @@
 open Core
 
-open Types
+open Yates_Types
 
 let () = Random.self_init ~allow_in_tests:true ()
 

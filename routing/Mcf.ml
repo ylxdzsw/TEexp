@@ -2,7 +2,7 @@ open Core
 
 open LP_Lang
 open Util
-open Types
+open Yates_Types
 
 let () = Random.self_init ~allow_in_tests:true ()
 
@@ -306,6 +306,4 @@ let solve (topo:topology) (pairs:demands) budget: scheme =
 
     recover_paths topo flows_table
 
-let initialize _ = ()
-
-let local_recovery = normalization_recovery
+let name = "Mcf"

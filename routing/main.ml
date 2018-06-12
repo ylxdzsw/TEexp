@@ -1,6 +1,13 @@
 open Core
 
-open Types
+open Yates_Types
+open Traffic
+open Util
+
+module type Algorithm = sig
+    val solve : topology -> demands -> int -> scheme
+    val name : string
+end
 
 let command =
   Command.basic_spec
@@ -28,27 +35,33 @@ let command =
     () ->
       let algorithms =
         let x = [] in
-        let x = if ecmp  then Ecmp::x  else x in
-        let x = if edksp then Edksp::x else x in
-        let x = if ksp   then Ksp::x   else x in
-        let x = if mcf   then Mcf::x   else x in
-        let x = if raeke then Raeke::x else x in
-        let x = if vlb   then Vlb::x   else x in
+        let x = if ecmp  then (module Ecmp  : Algorithm)::x else x in
+        let x = if edksp then (module Edksp : Algorithm)::x else x in
+        let x = if ksp   then (module Ksp   : Algorithm)::x else x in
+        let x = if mcf   then (module Mcf   : Algorithm)::x else x in
+        let x = if raeke then (module Raeke : Algorithm)::x else x in
+        let x = if vlb   then (module Vlb   : Algorithm)::x else x in
         match x with
-        | [] -> [Ecmp; Edksp; Ksp; Mcf; Raeke; Vlb]
+        | [] -> [(module Ecmp  : Algorithm);
+                 (module Edksp : Algorithm);
+                 (module Ksp   : Algorithm);
+                 (module Mcf   : Algorithm);
+                 (module Raeke : Algorithm);
+                 (module Vlb   : Algorithm)]
         | _ -> x in
 
       let fname suffix = "data/" ^ data ^ suffix in
       let topo = Net.Parse.from_dotfile (fname ".dot") in
       let demands = all_demands (fname ".demands") (fname ".hosts") topo in
       
-      List.iter (fun algo ->
-        List.iteri (fun i demand ->
-          let scheme = algo.solve topo demand budget in
-          let oc = Out_channel.create data ^ "_" ^ algo.name ^ "_" ^ (string_of_int i) ^ ".path" in
+      List.iter algorithms (fun algo ->
+        let module Algo = (val algo : Algorithm) in
+        List.iteri demands (fun i demand ->
+          let scheme = Algo.solve topo demand budget in
+          let oc = Out_channel.create (data ^ "_" ^ Algo.name ^ "_" ^ (string_of_int i) ^ ".path") in
           fprintf oc "%s\n" (dump_scheme topo scheme);
           Out_channel.close oc
         )
-      ) algorithms)
+      ))
 
 let _ = Command.run command

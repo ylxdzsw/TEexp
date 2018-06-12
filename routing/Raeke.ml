@@ -4,7 +4,7 @@ open Util
 open Yates_Frt
 open Yates_Mw
 open Yates_Rrt
-open Types
+open Yates_Types
 
 (* multiplicative weights input *)
 module MWInput : MW_INPUT with type structure = FRT.routing_tree = struct
@@ -72,8 +72,4 @@ let solve (topo:topology) (d:demands) budget : scheme =
   prev_scheme := new_scheme;
   new_scheme
 
-let initialize (s:scheme) : unit =
-  prev_scheme := s;
-  ()
-
-let local_recovery = normalization_recovery
+let name = "Raeke"

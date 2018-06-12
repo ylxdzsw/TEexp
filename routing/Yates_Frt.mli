@@ -1,4 +1,4 @@
-open Types
+open Yates_Types
 
 module type FRT_TYPE = sig
 

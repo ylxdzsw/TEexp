@@ -1,6 +1,6 @@
 open Core
 
-open Types
+open Yates_Types
 
 (* (s,t,r) = node s wants to send to node t at rate r *)
 type demand_pair = Topology.vertex * Topology.vertex * float

@@ -2,7 +2,7 @@ open Core
 
 open Apsp
 open Util
-open Types
+open Yates_Types
 
 let prev_scheme = ref SrcDstMap.empty
 
