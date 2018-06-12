@@ -58,7 +58,7 @@ let command =
         let module Algo = (val algo : Algorithm) in
         List.iteri demands (fun i demand ->
           let scheme = Algo.solve topo demand budget in
-          let oc = Out_channel.create (data ^ "_" ^ Algo.name ^ "_" ^ (string_of_int i) ^ ".path") in
+          let oc = Out_channel.create ("results/" ^ data ^ "_" ^ Algo.name ^ "_" ^ (string_of_int i) ^ ".path") in
           fprintf oc "%s\n" (dump_scheme topo scheme);
           Out_channel.close oc
         )
