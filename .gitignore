@@ -3,5 +3,6 @@
 *.pyc
 .ipynb_checkpoints
 .merlin
+results/
 _build
 gurobi.log

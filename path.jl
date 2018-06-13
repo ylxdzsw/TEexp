@@ -43,7 +43,7 @@ function select_hard_nop(nodes, edges, scheme, budget)
                 d[n] += 1
             end
         end
-        all(x <= budget for x in values(d))
+        all(x <= budget[n] for (n, x) in d)
     end
                 
     function cut_down(K)
@@ -73,7 +73,7 @@ function select_greedy(nodes, edges, scheme, budget)
         end
         
         overloads = Set()
-        for (n, v) in d @when length(v) > budget
+        for (n, v) in d @when length(v) > budget[n]
             push!(overloads, v...)
         end
         
@@ -122,7 +122,7 @@ function select_program(nodes, edges, scheme, budget)
             end
         end
         if length(passed) > 0
-            m[:addConstr](py"sum($passed) <= $budget", name="n_$n")
+            m[:addConstr](py"sum($passed) <= $(budget[n])", name="n_$n")
         end
     end
     
@@ -160,7 +160,7 @@ function select_program(nodes, edges, scheme, budget)
             end
         end
         if length(passed) > 0
-            m[:addConstr](py"sum($passed) <= $budget", name="n_$n")
+            m[:addConstr](py"sum($passed) <= $(budget[n])", name="n_$n")
         end
     end
     

@@ -1,4 +1,4 @@
-const ϵ = 1e-6
+const ϵ = 1e-4
 
 function minimize_maximum_link_utilization(nodes, edges, demand, scheme)
     m = grb.Model("Z")
@@ -35,6 +35,15 @@ function minimize_maximum_link_utilization(nodes, edges, demand, scheme)
     m[:setObjective](Z)
     m[:optimize]()
     
+    status = m[:status]
+    if status in (grb.GRB[:Status][:INF_OR_UNBD], grb.GRB[:Status][:INFEASIBLE], grb.GRB[:Status][:UNBOUNDED])
+        error("The model cannot be solved because it is infeasible or unbounded")
+    end
+
+    if status != grb.GRB[:Status][:OPTIMAL]
+        error("Optimization was stopped with status $status")
+    end
+    
     newscheme = Dict(pair => [(path, v[:X]) for ((path, weight), v) in zip(paths, weights[pair])]
                      for (pair, paths) in scheme)
 
@@ -44,7 +53,7 @@ end
 function minimize_maximum_link_utilization_then_maximize_throuput(nodes, edges, demand, scheme)
     scheme, Z = minimize_maximum_link_utilization(nodes, edges, demand, scheme)
     
-    Z <= 1 && return scheme, sum(values(demand))
+    Z <= 1 && return scheme, Dict(pair => 1 for pair in keys(demand))
     
     m = grb.Model("throuput")
     m[:setParam]("OutputFlag", false)
@@ -80,12 +89,22 @@ function minimize_maximum_link_utilization_then_maximize_throuput(nodes, edges, 
     m[:setObjective](py"sum($total_flow)", sense=grb.GRB[:MAXIMIZE])
     m[:optimize]()
                 
-    newscheme, total_flow = Dict(), 0
+    status = m[:status]
+    if status in (grb.GRB[:Status][:INF_OR_UNBD], grb.GRB[:Status][:INFEASIBLE], grb.GRB[:Status][:UNBOUNDED])
+        error("The model cannot be solved because it is infeasible or unbounded")
+    end
+
+    if status != grb.GRB[:Status][:OPTIMAL]
+        error("Optimization was stopped with status $status")
+    end
+                
+    newscheme, Zs = Dict(), Dict()
     for (pair, paths) in scheme
         tb = sum(i":X", bandwidths[pair])
         newscheme[pair] = [(path, b[:X] / tb) for ((path, _), b) in zip(paths, bandwidths[pair])]
-        total_flow += tb
+        # prt(pair, demand[pair], tb)
+        Zs[pair] = demand[pair] / tb
     end
-    newscheme, total_flow
+    newscheme, Zs
 end
 
