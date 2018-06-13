@@ -1,9 +1,94 @@
+const Scheme = Dict{String, Vector{Tuple{Vector{String}, Float64}}}
+
+function parse_schemes(io)
+    results = Dict{String, Scheme}()
+    
+    calgo, cpair = nothing, nothing
+    for line in eachline(io) @when !isempty(line)
+        if (m = match(r"\*\*\*(.*)\*\*\*", line)) != nothing
+            results[m[1]] = Scheme()
+            calgo = results[m[1]]
+        elseif (m = match(r"(.*) -> (.*) :", line)) != nothing
+            if m[1] != m[2]
+                calgo["$(m[1]) $(m[2])"] = []
+                cpair = calgo["$(m[1]) $(m[2])"]
+            else
+                cpair = nothing
+            end
+        elseif cpair != nothing
+            path, weight = split(line, '@')
+            weight = parse(f64, weight)
+            path = [join(edge.args, ' ') for edge in parse(path).args]
+            push!(cpair, (path, weight))
+        end
+    end
+    
+    results
+end
+
 function renormalize(scheme)
     map(scheme) do p
         pair, paths = p
         tw = sum(cadr, paths)
         pair => [(path, weight / tw) for (path, weight) in paths]
     end
+end
+
+function select_hard_nop(nodes, edges, scheme, budget)
+    function meet_budget()
+        d = Dict(n => 0 for n in nodes)
+        for (pair, paths) in scheme, (path, weight) in paths, edge in path
+            n = split(edge, ' ') |> car
+            if car(n) == 's'
+                d[n] += 1
+            end
+        end
+        all(x <= budget for x in values(d))
+    end
+                
+    function cut_down(K)
+        Dict(pair => length(paths) > K ? sort(paths, by=cadr, rev=true)[1:K] : paths for (pair, paths) in scheme)
+    end
+
+    K = maximum(map(length, collect(values(scheme))))
+                
+    while !meet_budget() && K > 0
+        scheme = cut_down(K)
+        K -= 1
+    end
+    
+    renormalize(scheme)
+end
+
+function select_greedy(nodes, edges, scheme, budget)
+    scheme = deepcopy(scheme)
+    
+    function dispute_one()
+        d = Dict(n => [] for n in nodes)
+        for (pair, paths) in scheme, (i, (path, weight)) in enumerate(paths), edge in path
+            n = split(edge, ' ') |> car
+            if car(n) == 's'
+                push!(d[n], (pair, i, weight))
+            end
+        end
+        
+        overloads = Set()
+        for (n, v) in d @when length(v) > budget
+            push!(overloads, v...)
+        end
+        
+        if length(overloads) > 0
+            pair, i, w = min(overloads..., by=i"3")
+            deleteat!(scheme[pair], i)
+            scheme = renormalize(scheme)
+            true
+        else
+            false
+        end
+    end
+    
+    while dispute_one() end
+    scheme
 end
 
 function select_program(nodes, edges, scheme, budget)
@@ -75,7 +160,7 @@ function select_program(nodes, edges, scheme, budget)
             end
         end
         if length(passed) > 0
-            m[:addConstr](py"sum($passed) <= $memory_budget", name="n_$n")
+            m[:addConstr](py"sum($passed) <= $budget", name="n_$n")
         end
     end
     

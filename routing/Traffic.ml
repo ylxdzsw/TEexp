@@ -26,7 +26,7 @@ let open_demands (demand_file:string) (host_file:string) (topo:topology) : (inde
 let close_demands (ic:In_channel.t) : unit =
   In_channel.close ic
 
-let next_demand ?scale:(scale=1.0) (ic:In_channel.t) (host_map:index_map) : demands =
+let next_demand (ic:In_channel.t) (host_map:index_map) : demands =
   let line =
     try
       In_channel.input_line_exn ic
@@ -48,7 +48,7 @@ let next_demand ?scale:(scale=1.0) (ic:In_channel.t) (host_map:index_map) : dema
       match (s,d) with
       | (Some s, Some d) ->
         (* Can't demand from yourself *)
-        let v = if i = j then 0.0 else (scale *. Float.of_string (entries.((i*size) + j))) in
+        let v = if i = j then 0.0 else (Float.of_string (entries.((i*size) + j))) in
         demands := SrcDstMap.set !demands ~key:(s,d) ~data:v
       | _ -> () (* if i or j-th node in input demand matrix is not in subgraph,
                    ignore the corresponding (i,j) demand entry *)
