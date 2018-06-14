@@ -54,7 +54,7 @@ end
 
 @main function main(data)
     @assert data in data_list
-    io, process = open(`yates -budget 16 $data`)
+    io, process = open(`yates -budget 12 $data`)
     path_sets = parse_schemes(io)
     nodes, edges = read_topo("data/$data.dot")
     demands = read_demand("data/$data.hosts", "data/$data.demands")
@@ -63,9 +63,16 @@ end
     for (i, demand) in enumerate(demands), algo in algo_list
         for (name, select) in (("program", select_program),
                                ("greedy", select_greedy),
-                               ("hardnop", select_hard_nop))
+                               ("hardnop", select_hard_nop)) @when length(nodes) < 40 || name != "greedy"
             open("results/$data-$i-$algo-$name.result", "w") do fout
+                tic()
                 raw_scheme = select(nodes, edges, path_sets[algo], budgets)
+                time = toq()
+                if any(isempty, values(raw_scheme))
+                    println(fout, "cannot solve")
+                    continue
+                end
+                
                 m1_scheme, Z = minimize_maximum_link_utilization(nodes, edges, demand, raw_scheme)
                 m2_scheme, Zs = minimize_maximum_link_utilization_then_maximize_throuput(nodes, edges, demand, raw_scheme)
                 
@@ -73,6 +80,9 @@ end
                 println(fout, "number of edges (core): ", length(edges))
                 println(fout, "number of demand pairs: ", length(demand))
                 println(fout, "average budgets: ", mean(values(budgets)))
+                println(fout)
+                
+                println(fout, "time elapsed during path selection: ", time, 's')
                 println(fout)
                 
                 println(fout, "Z: ", Z)

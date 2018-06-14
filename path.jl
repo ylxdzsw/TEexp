@@ -34,6 +34,12 @@ function renormalize(scheme)
     end
 end
 
+function renormalize!(scheme, pair)
+    paths = scheme[pair]
+    tw = sum(cadr, paths)
+    scheme[pair] = [(path, weight / tw) for (path, weight) in paths]
+end
+
 function select_hard_nop(nodes, edges, scheme, budget)
     function meet_budget()
         d = Dict(n => 0 for n in nodes)
@@ -80,7 +86,7 @@ function select_greedy(nodes, edges, scheme, budget)
         if length(overloads) > 0
             pair, i, w = min(overloads..., by=i"3")
             deleteat!(scheme[pair], i)
-            scheme = renormalize(scheme)
+            renormalize!(scheme, pair)
             true
         else
             false

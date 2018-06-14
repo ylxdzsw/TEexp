@@ -1,4 +1,4 @@
-const ϵ = 1e-4
+const ϵ = 1e-2
 
 function minimize_maximum_link_utilization(nodes, edges, demand, scheme)
     m = grb.Model("Z")
@@ -6,16 +6,14 @@ function minimize_maximum_link_utilization(nodes, edges, demand, scheme)
     
     Z = m[:addVar](name="Z")
     
-    weights, passed = Dict(), Dict(n => [] for n in nodes)
+    weights, passed = Dict(), Dict(e => [] for e in edges)
     for (pair, paths) in scheme
         weights[pair] = map(enumerate(paths)) do p
             i, (path, weight) = p
-            x = m[:addVar]()
-            for edge in path
-                n = split(edge, ' ') |> car
-                if car(n) == 's'
-                    push!(passed[n], demand[pair] * x)
-                end
+            p1, p2 = split(pair, ' ')
+            x = m[:addVar](name="p_$(p1)_$(p2)_$i")
+            for edge in path @when 'h' ∉ edge
+                push!(passed[edge], demand[pair] * x)
             end
             x
         end
@@ -28,20 +26,25 @@ function minimize_maximum_link_utilization(nodes, edges, demand, scheme)
     end
     
     # constraint 2: do not exceed capacity * Z
-    for (n, v) in passed
+    for v in values(passed)
         m[:addConstr](py"sum($v) <= 1000 * $Z")
     end
     
     m[:setObjective](Z)
+    m[:write]("dump1.lp")
     m[:optimize]()
     
     status = m[:status]
-    if status in (grb.GRB[:Status][:INF_OR_UNBD], grb.GRB[:Status][:INFEASIBLE], grb.GRB[:Status][:UNBOUNDED])
-        error("The model cannot be solved because it is infeasible or unbounded")
+    if status == grb.GRB[:Status][:INFEASIBLE]
+        error("1 The model cannot be solved because it is infeasible")
+    end
+    
+    if status == grb.GRB[:Status][:UNBOUNDED]
+        error("1 The model cannot be solved because it is unbounded")
     end
 
     if status != grb.GRB[:Status][:OPTIMAL]
-        error("Optimization was stopped with status $status")
+        error("1 Optimization was stopped with status $status")
     end
     
     newscheme = Dict(pair => [(path, v[:X]) for ((path, weight), v) in zip(paths, weights[pair])]
@@ -58,16 +61,13 @@ function minimize_maximum_link_utilization_then_maximize_throuput(nodes, edges, 
     m = grb.Model("throuput")
     m[:setParam]("OutputFlag", false)
     
-    bandwidths, passed = Dict(), Dict(n => [] for n in nodes)
+    bandwidths, passed = Dict(), Dict(e => [] for e in edges)
     for (pair, paths) in scheme
         bandwidths[pair] = map(enumerate(paths)) do p
             i, (path, bandwidth) = p
             x = m[:addVar]()
-            for edge in path
-                n = split(edge, ' ') |> car
-                if car(n) == 's'
-                    push!(passed[n], x)
-                end
+            for edge in path @when 'h' ∉ edge
+                push!(passed[edge], x)
             end
             x
         end
@@ -81,21 +81,22 @@ function minimize_maximum_link_utilization_then_maximize_throuput(nodes, edges, 
     end
     
     # constraint 2: do not exceed capacity
-    for (n, v) in passed
+    for v in values(passed)
         m[:addConstr](py"sum($v) <= 1000")
     end
     
     total_flow = [b for l in values(bandwidths) for b in l]
     m[:setObjective](py"sum($total_flow)", sense=grb.GRB[:MAXIMIZE])
+    m[:write]("dump2.lp")
     m[:optimize]()
-                
+
     status = m[:status]
     if status in (grb.GRB[:Status][:INF_OR_UNBD], grb.GRB[:Status][:INFEASIBLE], grb.GRB[:Status][:UNBOUNDED])
-        error("The model cannot be solved because it is infeasible or unbounded")
+        error("2 The model cannot be solved because it is infeasible or unbounded")
     end
 
     if status != grb.GRB[:Status][:OPTIMAL]
-        error("Optimization was stopped with status $status")
+        error("2 Optimization was stopped with status $status")
     end
                 
     newscheme, Zs = Dict(), Dict()
