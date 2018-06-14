@@ -8,8 +8,8 @@ using Fire
 include("path.jl")
 include("weight.jl")
 
-const data_list = ["abilene", "Cernet", "Cesnet201006", "Chinanet", "Esnet", "Garr200112", "Grnet",
-                   "Ibm", "jelly16", "Nordu1997", "Tinet"]
+const data_list = ["abilene", "gscale", "Cernet", "Cesnet201006", "Chinanet", "Esnet", "Garr200112",
+                   "Grnet", "Ibm", "jelly16", "Nordu1997", "Sprint", "Tinet"]
 const algo_list = ["Ecmp", "Edksp", "Ksp", "Mcf", "Raeke", "Vlb"]
 
 function read_topo(file)
@@ -54,7 +54,7 @@ end
 
 @main function main(data)
     @assert data in data_list
-    io, process = open(`yates -budget 12 $data`)
+    io, process = open(`yates -budget 16 $data`)
     path_sets = parse_schemes(io)
     nodes, edges = read_topo("data/$data.dot")
     demands = read_demand("data/$data.hosts", "data/$data.demands")
@@ -63,18 +63,18 @@ end
     for (i, demand) in enumerate(demands), algo in algo_list
         for (name, select) in (("program", select_program),
                                ("greedy", select_greedy),
-                               ("hardnop", select_hard_nop)) @when length(nodes) < 40 || name != "greedy"
+                               ("hardnop", select_hard_nop)) @when length(nodes) < 20 || name != "greedy"
             open("results/$data-$i-$algo-$name.result", "w") do fout
                 tic()
                 raw_scheme = select(nodes, edges, path_sets[algo], budgets)
-                time = toq()
-                if any(isempty, values(raw_scheme))
-                    println(fout, "cannot solve")
-                    continue
-                end
-                
+                time1 = toq()
+                any(isempty, values(raw_scheme)) && return println(fout, "cannot solve")
+                tic()
                 m1_scheme, Z = minimize_maximum_link_utilization(nodes, edges, demand, raw_scheme)
+                time2 = toq()
+                tic()
                 m2_scheme, Zs = minimize_maximum_link_utilization_then_maximize_throuput(nodes, edges, demand, raw_scheme)
+                time3 = toq()
                 
                 println(fout, "number of nodes (switch): ", length(nodes))
                 println(fout, "number of edges (core): ", length(edges))
@@ -82,7 +82,9 @@ end
                 println(fout, "average budgets: ", mean(values(budgets)))
                 println(fout)
                 
-                println(fout, "time elapsed during path selection: ", time, 's')
+                println(fout, "time elapsed during path selection: ", time1, 's')
+                println(fout, "time elapsed during first step: ", time2, 's')
+                println(fout, "time elapsed during first + second step: ", time3, 's')
                 println(fout)
                 
                 println(fout, "Z: ", Z)
@@ -105,7 +107,7 @@ end
                 println(fout)
                 
                 println(fout, "number of path, total flow, and link utiliaztion of each edge:")
-                edge_dict = Dict(e => [] for e in edges)
+                edge_dict = Dict(e => f64[] for e in edges)
                 for (pair, paths) in m2_scheme, (path, weight) in paths, edge in path @when 'h' ∉ edge
                     push!(edge_dict[edge], demand[pair] * weight)
                 end
