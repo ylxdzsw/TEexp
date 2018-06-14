@@ -66,7 +66,7 @@ end
     for (i, demand) in enumerate(demands), algo in algo_list
         for (name, select) in (("program", select_program),
                                ("greedy", select_greedy),
-                               ("hardnop", select_hard_nop)) @when length(nodes) < 20 || name != "greedy"
+                               ("hardnop", select_hard_nop)) @when length(nodes) < 16 || name != "greedy"
             json = Dict()
             
             open("results/$data-$i-$algo-$name.result", "w") do fout
