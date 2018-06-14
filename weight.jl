@@ -1,4 +1,4 @@
-const ϵ = 1e-2
+const ϵ = 1e-6
 
 function minimize_maximum_link_utilization(nodes, edges, demand, scheme)
     m = grb.Model("Z")
