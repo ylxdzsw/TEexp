@@ -277,7 +277,7 @@ end
                 println(fout, "Z, total throuput, and throuput ratio at single edge failure:")
                 json["Z, total throuput, and throuput ratio at single edge failure"] = x = Dict()
                                                                         
-                edge_dict = single_failure(nodes, edges, demand, path_sets[algo])
+                edge_dict = single_failure(nodes, edges, demand, raw_scheme)
                 for (edge, res) in sort(collect(edge_dict), lt=natural, by=car)
                     if res isa String
                         println(fout, "  ", edge, ": ", res)
