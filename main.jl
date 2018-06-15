@@ -55,7 +55,91 @@ function write_scheme(io, scheme, x=Dict())
     end
 end
 
-@main function main(data)
+function optimal_mcf(nodes, edges, demand)
+    tpair(pair) = split(replace(pair, 'h', 's'), ' ')
+    
+    le = Dict(e => Dict() for e in edges)
+
+    conn = Dict(n => (
+        [s for s in nodes if "$s $n" in edges],
+        [t for t in nodes if "$n $t" in edges]
+    ) for n in nodes)
+    
+    m = grb.Model("optimal_mcf")
+    m[:setParam]("OutputFlag", false)
+    Z = m[:addVar](name="Z")
+    
+    for (pair, d) in demand
+        u, v = tpair(pair)
+        luv = Dict(e => (le[e][pair] = m[:addVar](name="l_$(e)_$(u)_$(v)")) for e in edges)
+        m[:update]()
+        
+        # constraint 1: influx == outflux for core nodes 
+        for n in nodes @when n ∉ (u, v)
+            ti = [luv["$u $n"] for u in car(conn[n])]
+            to = [luv["$n $v"] for v in cadr(conn[n])]
+
+            m[:addConstr](py"sum($ti) == sum($to)")
+        end
+
+        # constraint 2: demands are fulfilled
+        x = [luv["$u $v"] for u in car(conn[v])]
+        m[:addConstr](py"sum($x) == $d")
+                                            
+        x = [luv["$u $v"] for v in cadr(conn[u])]
+        m[:addConstr](py"sum($x) == $d")
+    end
+
+    # constraint 3: minimize maximum link utilization
+    for (edge, flows) in le
+        flows = collect(values(flows))
+        m[:addConstr](py"sum($flows) <= 1000 * $Z")
+    end
+
+    m[:setObjective](Z)
+    m[:optimize]()
+
+    json = Dict("Z" => m[:getObjective]()[:getValue]())
+                                        
+    for (edge, flows) in le, (pair, flow) in flows
+        json["$pair $edge"] = flow[:X]
+    end
+
+    json
+end
+                                    
+function single_failure(nodes, edges, demand, scheme)
+    rev(x) = join(reverse(split(x, ' ')), ' ')
+
+    stat(edges, scheme) = begin
+        m1_scheme, Z = minimize_maximum_link_utilization(nodes, edges, demand, scheme)
+        m2_scheme, Zs = minimize_maximum_link_utilization_then_maximize_throuput(nodes, edges, demand, scheme)
+        Z, sum(d / Zs[pair] for (pair, d) in demand)
+    end
+
+    json = Dict()
+
+    for e in edges @when (<)(split(e, ' ')...)
+        edges_f = filter(x->x ∉ (e, rev(e)), edges)
+        scheme_f = Dict()
+        for (pair, paths) in scheme
+            paths_f = [(path, weight) for (path, weight) in paths if e ∉ path && rev(e) ∉ path]
+            # no need to renormalize since we will overwrite them anyway
+            isempty(paths_f) && @goto disconnected
+            scheme_f[pair] = paths_f
+        end
+
+        json[e] = stat(edges_f, scheme_f)
+        continue
+
+        @label disconnected
+        json[e] = "some pairs have no path"
+    end
+
+    json
+end
+
+@main function main(data; optimal::Bool=false)
     @assert data in data_list
     io, process = open(`yates -budget 16 $data`)
     path_sets = parse_schemes(io)
@@ -63,10 +147,17 @@ end
     demands = read_demand("data/$data.hosts", "data/$data.demands")
     budgets = read_budget("data/$data.hosts", "data/$data.budgets")
     
-    for (i, demand) in enumerate(demands), algo in algo_list
-        for (name, select) in (("program", select_program),
-                               ("greedy", select_greedy),
-                               ("hardnop", select_hard_nop)) @when length(nodes) < 16 || name != "greedy"
+    for (i, demand) in enumerate(demands)
+        if optimal
+            open("results/$data-$i-optimal-mcf.json", "w") do fout
+                JSON.print(fout, optimal_mcf(nodes, edges, demand), 2)
+            end
+            continue
+        end
+            
+        for algo in algo_list, (name, select) in (("program", select_program),
+                                                  ("greedy", select_greedy),
+                                                  ("hardnop", select_hard_nop)) @when length(nodes) < 16 || name != "greedy"
             json = Dict()
             
             open("results/$data-$i-$algo-$name.result", "w") do fout
@@ -118,8 +209,9 @@ end
                 println(fout, "total throuput before the second step:", sum(values(demand)) / max(Z, 1))
                 json["total throuput before the second step"] = sum(values(demand)) / max(Z, 1)
                 
-                println(fout, "total throuput after the second step:", sum(d / Zs[pair] for (pair, d) in demand))
-                json["total throuput after the second step"] = sum(d / Zs[pair] for (pair, d) in demand)
+                total_throuput = sum(d / Zs[pair] for (pair, d) in demand)
+                println(fout, "total throuput after the second step:", total_throuput)
+                json["total throuput after the second step"] = total_throuput
                 
                 println(fout)
                 
@@ -150,7 +242,7 @@ end
                 
                 edge_dict = Dict(e => f64[] for e in edges)
                 for (pair, paths) in m2_scheme, (path, weight) in paths, edge in path @when 'h' ∉ edge
-                    push!(edge_dict[edge], demand[pair] * weight)
+                    push!(edge_dict[edge], demand[pair] * weight / Zs[pair])
                 end
                 for (edge, flows) in sort(collect(edge_dict), lt=natural, by=car)
                     println(fout, "  ", edge, ": ", length(flows), ", ", sum(flows), ", ", sum(flows) / 10, '%')
@@ -181,8 +273,28 @@ end
                                 sum(d / Zs[pair] for (pair, d) in demand) / sum(values(demand)) * 100]
                 
                 println(fout)
-                
-                
+
+                println(fout, "Z, total throuput, and throuput ratio at single edge failure:")
+                json["Z, total throuput, and throuput ratio at single edge failure"] = x = Dict()
+                                                                        
+                edge_dict = single_failure(nodes, edges, demand, path_sets[algo])
+                for (edge, res) in sort(collect(edge_dict), lt=natural, by=car)
+                    if res isa String
+                        println(fout, "  ", edge, ": ", res)
+                        x[edge] = res
+                    else
+                        Z, tt = res
+                        println(fout, "  ", edge, ": ", Z, ", ", tt, ", ", tt / total_throuput * 100, '%')
+                        x[edge] = Z, tt, tt / total_throuput * 100
+                    end
+                end
+                for r in (90, 95, 99, 99.9, 99.99)
+                    println(fout, "  P(T > $r%): ", mean(p isa Tuple && p[3] >= r for (e, p) in x if !startswith(e, 'P')))
+                    x["P(T > $r%)"] = mean(p isa Tuple && p[3] >= r for (e, p) in x if !startswith(e, 'P'))
+                end
+                println(fout)
+
+                                                                        
                 println(fout, "path set:")
                 json["path set"] = x = Dict()
                 write_scheme(fout, path_sets[algo], x)
