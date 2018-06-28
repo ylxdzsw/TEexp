@@ -83,11 +83,13 @@ function optimal_mcf(nodes, edges, demand)
         end
 
         # constraint 2: demands are fulfilled
-        x = [luv["$u $v"] for u in car(conn[v])]
-        m[:addConstr](py"sum($x) == $d")
+        ti = [luv["$x $v"] for x in car(conn[v])]
+        to = [luv["$v $x"] for x in cadr(conn[v])]
+        m[:addConstr](py"sum($ti) - sum($to) == $d")
                                             
-        x = [luv["$u $v"] for v in cadr(conn[u])]
-        m[:addConstr](py"sum($x) == $d")
+        ti = [luv["$x $v"] for x in car(conn[u])]
+        to = [luv["$v $x"] for x in cadr(conn[u])]
+        m[:addConstr](py"sum($to) - sum($ti) == $d")
     end
 
     # constraint 3: minimize maximum link utilization
