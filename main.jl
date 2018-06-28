@@ -87,8 +87,8 @@ function optimal_mcf(nodes, edges, demand)
         to = [luv["$v $x"] for x in cadr(conn[v])]
         m[:addConstr](py"sum($ti) - sum($to) == $d")
                                             
-        ti = [luv["$x $v"] for x in car(conn[u])]
-        to = [luv["$v $x"] for x in cadr(conn[u])]
+        ti = [luv["$x $u"] for x in car(conn[u])]
+        to = [luv["$u $x"] for x in cadr(conn[u])]
         m[:addConstr](py"sum($to) - sum($ti) == $d")
     end
 
