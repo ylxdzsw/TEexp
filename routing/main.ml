@@ -19,6 +19,7 @@ let command =
       let algorithms = [(module Ecmp  : Algorithm);
                         (module Edksp : Algorithm);
                         (module Ksp   : Algorithm);
+                        (module Custom: Algorithm);
                         (module Mcf   : Algorithm);
                         (module Raeke : Algorithm);
                         (module Vlb   : Algorithm)] in
