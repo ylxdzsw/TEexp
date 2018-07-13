@@ -20,7 +20,6 @@ let command =
                         (module Edksp : Algorithm);
                         (module Ksp   : Algorithm);
                         (module Custom: Algorithm);
-                        (module Mcf   : Algorithm);
                         (module Raeke : Algorithm);
                         (module Vlb   : Algorithm)] in
 
@@ -30,10 +29,8 @@ let command =
       
       List.iter algorithms (fun algo ->
         let module Algo = (val algo : Algorithm) in
-        List.iteri demands (fun i demand ->
-          let scheme = Algo.solve topo demand budget in
-          printf "***%s***\n\n%s\n" Algo.name (dump_scheme topo scheme)
-        )
+        let scheme = Algo.solve topo SrcDstMap.empty budget in
+        printf "***%s***\n\n%s\n" Algo.name (dump_scheme topo scheme)
       ))
 
 let _ = Command.run command

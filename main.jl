@@ -11,7 +11,7 @@ include("weight.jl")
 
 const data_list = ["abilene", "gscale", "Cernet", "Cesnet201006", "Chinanet", "Esnet", "Garr200112",
                    "Grnet", "Ibm", "jelly16", "Nordu1997", "Sprint", "Tinet"]
-const algo_list = ["Ecmp", "Edksp", "Ksp", "Custom", "Mcf", "Raeke", "Vlb"]
+const algo_list = ["Ecmp", "Edksp", "Ksp", "Custom", "Raeke", "Vlb"]
 
 function read_topo(file)
     nodes, edges = Set{String}(), String[]
