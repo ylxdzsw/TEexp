@@ -1,0 +1,89 @@
+#install Ubuntu 16.04 Desktop version
+sudo apt-get update
+sudo apt-get install vim task-spooler
+tar -zxvf julia070.tar.gz
+mv julia-0.7.0/ ~/Documents/
+cd ~/julia-0.7.0/
+sudo ln -s ./bin/julia /usr/local/bin/julia
+
+tar -zxvf gurobi752.tar.gz
+mv gurobi/ ~/Documents/
+vim ~/.bashrc
+
+#add the following lines at the bottom of the file ~/.bashrc
+export GUROBI_HOME="/home/run/Documents/gurobi"
+export PATH="$PATH:/home/run/Documents/julia-0.7.0/bin:${GUROBI_HOME}/bin"
+export LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${GUROBI_HOME}/lib"
+export GRB_LICENSE_FILE="/home/run/gurobi.lic"
+
+source ~/.bashrc
+
+grbgetkey ce1936f4-8b4e-11e9-a950-02e454ff9c50
+gurovi_cl
+cd ~/Documents/gurobi/
+sudo python setup.py install
+
+julia --version
+julia
+julia>] # this brings you to the pkg>
+(v0.7) pkg> add https://github.com/JuliaStrings/NaturalSort.jl
+(v0.7) pkg> add https://github.com/ylxdzsw/JsonBuilder.jl
+(v0.7) pkg> add https://github.com/ylxdzsw/oh-my-julia.jl
+(v0.7) pkg> add "CSV"
+(v0.7) pkg> add "JSON"
+(v0.7) pkg> add "IJulia"
+(v0.7) pkg> add "DataFrames"
+(v0.7) pkg> add "Plots"
+(v0.7) pkg> add "Fire"
+(v0.7) pkg> add PyCall@1.18.5
+
+julia> ENV["PYTHON"] = "/usr/bin/python"
+"/usr/bin/python"
+
+julia> Pkg.build("PyCall")
+WARNING: Base.Pkg is deprecated, run `using Pkg` instead
+ in module Main
+  Building Conda ─→ `~/.julia/packages/Conda/kLXeC/deps/build.log`
+  Building PyCall → `~/.julia/packages/PyCall/zqDXB/deps/build.log`
+
+julia>
+
+cd ~/Desktop/teda3/yates6/routing/
+export OPAMYES=1
+export OPAMVERBOSE=1
+sudo apt update -qq
+sudo apt install -qq git ocaml ocaml-native-compilers camlp4-extra opam m4
+opam init
+opam update
+opam switch 4.06.0
+eval `opam config env`
+opam install dune
+opam pin add --yes --no-action yates .
+opam install --yes --deps-only yates
+jbuilder build @install && jbuilder install
+cd ..
+julia main.jl gscale # This is to test the TED software can running correctly.
+julia main.jl gscale --optimal # This is necessary if you want to test the Drawing software for gscale topology.
+./TEDrun_alltest.sh
+
+# You need to monitor whether the space of /home folder is enough. For example if tsp still has 4 works running but the space is less than 10 G,
+# then you may need to using the following command to clean some space.
+cd ~/Desktop/teda3/yates6/results/
+rm *.result
+
+tsp # You can check how many works have done.
+
+#each time after rebooting run the following command, otherwise when you run julia main.jl gscale, you will get Base.IOError("could not spawn `yates -budget 16 gscale`: no such file or directory (ENOENT)", -2)
+eval `opam config env`
+
+#to run the Drawing software after, you also need to install the following packages of python 2.7
+sudo apt install python-pip
+pip install --upgrade pip
+python -m pip install numpy
+python -m pip install matplotlib
+
+cd ~/Desktop/teda3/yates6/DrawFigures720/
+mkdir figgscale
+python main.py -p /home/run/Desktop/teda3/yates6/results/ -t gscale -dp /home/run/Desktop/teda3/yates6/data/ -fp /home/run/Desktop/teda3/yates6/DrawFigure720/figgscale/
+
+#for each topology "topo", change the "gscale" in the upper two lines to that topo, you will get the figures of "topo"
