@@ -3,9 +3,9 @@ const ϵ = 1e-6
 function minimize_maximum_link_utilization(nodes, edges, demand, scheme)
     m = grb.Model("Z")
     m[:setParam]("OutputFlag", false)
-    
+
     Z = m[:addVar](name="Z")
-    
+
     weights, passed = Dict(), Dict(e => [] for e in edges)
     for (pair, paths) in scheme
         weights[pair] = map(enumerate(paths)) do p
@@ -19,24 +19,24 @@ function minimize_maximum_link_utilization(nodes, edges, demand, scheme)
         end
     end
     m[:update]()
-    
+
     # constraint 1: weights adds to 1
     for (pair, w) in weights
         m[:addConstr](py"sum($w) == 1")
     end
-    
+
     # constraint 2: do not exceed capacity * Z
     for v in values(passed)
         m[:addConstr](py"sum($v) <= 1000 * $Z")
     end
-    
+
     m[:setObjective](Z)
     m[:optimize]()
-    
+
     if m[:status] != grb.GRB[:Status][:OPTIMAL]
-        m[:write]("dump1.lp")
+    	m[:write]("dump1.lp")
     end
-    
+
     newscheme = Dict(pair => [(path, v[:X]) for ((path, weight), v) in zip(paths, weights[pair])]
                      for (pair, paths) in scheme)
 
@@ -45,12 +45,12 @@ end
 
 function minimize_maximum_link_utilization_then_maximize_throuput(nodes, edges, demand, scheme)
     scheme, Z = minimize_maximum_link_utilization(nodes, edges, demand, scheme)
-    
+
     Z <= 1 && return scheme, Dict(pair => 1 for pair in keys(demand))
-    
+
     m = grb.Model("throuput")
     m[:setParam]("OutputFlag", false)
-    
+
     bandwidths, passed = Dict(), Dict(e => [] for e in edges)
     for (pair, paths) in scheme
         bandwidths[pair] = map(enumerate(paths)) do p
@@ -63,24 +63,24 @@ function minimize_maximum_link_utilization_then_maximize_throuput(nodes, edges, 
         end
     end
     m[:update]()
-    
+
     # constraint 1: d/Z ⩽ ∑b ⩽ d
     for (pair, b) in bandwidths
         m[:addConstr](py"sum($b) <= $(demand[pair])")
         m[:addConstr](py"sum($b) >= $(demand[pair] / (Z + ϵ))")
     end
-    
+
     # constraint 2: do not exceed capacity
     for v in values(passed)
         m[:addConstr](py"sum($v) <= 1000")
     end
-    
+
     total_flow = [b for l in values(bandwidths) for b in l]
     m[:setObjective](py"sum($total_flow)", sense=grb.GRB[:MAXIMIZE])
     m[:optimize]()
 
     if m[:status] != grb.GRB[:Status][:OPTIMAL]
-        m[:write]("dump2.lp")
+    	m[:write]("dump2.lp")
     end
 
     newscheme, Zs = Dict(), Dict()
@@ -92,4 +92,3 @@ function minimize_maximum_link_utilization_then_maximize_throuput(nodes, edges, 
     end
     newscheme, Zs
 end
-
