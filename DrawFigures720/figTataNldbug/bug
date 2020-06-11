@@ -1,0 +1,18 @@
+TataNld-6-optimal-mcf.json
+Traceback (most recent call last):
+  File "main.py", line 101, in <module>
+    Zless1, Zlarge1 = analysisZ(demands, pathpre, topo, algdic, comp, figurepath)#compare, figurepath)
+  File "/home/run/Documents/TEexp/DrawFigures720/analysisExps.py", line 30, in analysisZ
+    fileOptimal=readOptimal(filename)
+  File "/home/run/Documents/TEexp/DrawFigures720/readOptimal.py", line 8, in readOptimal
+    bandAllo=json.load(file)
+  File "/usr/lib/python2.7/json/__init__.py", line 291, in load
+    **kw)
+  File "/usr/lib/python2.7/json/__init__.py", line 339, in loads
+    return _default_decoder.decode(s)
+  File "/usr/lib/python2.7/json/decoder.py", line 364, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+  File "/usr/lib/python2.7/json/decoder.py", line 382, in raw_decode
+    raise ValueError("No JSON object could be decoded")
+ValueError: No JSON object could be decoded
+

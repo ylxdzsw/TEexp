@@ -1,0 +1,12 @@
+============
+{}
+{}
+Traceback (most recent call last):
+  File "main.py", line 101, in <module>
+    Zless1, Zlarge1 = analysisZ(demands, pathpre, topo, algdic, comp, figurepath)#compare, figurepath)
+  File "/home/run/Documents/TEexp/DrawFigures720/analysisExps.py", line 66, in analysisZ
+    drawBenefit(Zless1,1,6,'Z','Performance ratio (Zalg/Zopt)','Z-'+topo+'-1-'+comp+'-Zless1all.pdf', figurepath)
+  File "/home/run/Documents/TEexp/DrawFigures720/drawFigures.py", line 109, in drawBenefit
+    x,y = map(list, zip(*s))
+ValueError: need more than 0 values to unpack
+
